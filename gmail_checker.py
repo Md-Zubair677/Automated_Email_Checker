@@ -10,6 +10,7 @@ auth_state_path = (
     / ".auth"
     / "storage_state.json"
 )
+# First login needs a visible browser; saved sessions can run headlessly.
 has_saved_state = auth_state_path.is_file()
 
 with sync_playwright() as playwright:
@@ -35,6 +36,7 @@ with sync_playwright() as playwright:
                 "Delete the saved state and run again to sign in visibly."
             )
     else:
+        # Sign in interactively so the user can complete Google's 2-step check.
         page.goto("https://mail.google.com")
         page.get_by_label("Email or phone").fill(GMAIL_USERNAME)
         page.get_by_role("button", name="Next").click()
@@ -51,6 +53,7 @@ with sync_playwright() as playwright:
     page.get_by_role("main").wait_for()
 
     auth_state_path.parent.mkdir(parents=True, exist_ok=True)
+    # Gmail marks unread inbox rows with the zA and zE classes.
     unread_rows = page.locator("tr.zA.zE")
     for index in range(unread_rows.count()):
         row = unread_rows.nth(index)
@@ -63,6 +66,7 @@ with sync_playwright() as playwright:
             }
         )
 
+    # Refresh the session state so it can be reused on the next run.
     context.storage_state(path=str(auth_state_path))
 
     browser.close()
