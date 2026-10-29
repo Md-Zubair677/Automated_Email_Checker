@@ -1,7 +1,6 @@
 from pathlib import Path
 
 from playwright.sync_api import sync_playwright
-from credentials import GMAIL_PASSWORD, GMAIL_USERNAME
 
 unread_messages = []
 auth_state_path = (
@@ -10,12 +9,11 @@ auth_state_path = (
     / ".auth"
     / "storage_state.json"
 )
-# First login needs a visible browser; saved sessions can run headlessly.
 has_saved_state = auth_state_path.is_file()
 
 with sync_playwright() as playwright:
     browser = playwright.chromium.launch(
-        headless=has_saved_state,
+        headless=False,
         args=[
             "--disable-dev-shm-usage",
             "--disable-blink-features=AutomationControlled"
@@ -36,14 +34,10 @@ with sync_playwright() as playwright:
                 "Delete the saved state and run again to sign in visibly."
             )
     else:
-        # Sign in interactively so the user can complete Google's 2-step check.
         page.goto("https://mail.google.com")
-        page.get_by_label("Email or phone").fill(GMAIL_USERNAME)
-        page.get_by_role("button", name="Next").click()
-        page.get_by_label("Enter your password").fill(GMAIL_PASSWORD)
-        page.get_by_role("button", name="Next").click()
         print(
-            "Complete 2-step verification in the browser. "
+            "Sign in to Gmail manually in the browser, including your email, "
+            "password, and any verification prompts. "
             "The script will continue when Gmail loads."
         )
         page.wait_for_url("https://mail.google.com/**", timeout=300_000)

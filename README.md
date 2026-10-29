@@ -8,11 +8,11 @@ read.
 ## What the project does
 
 1. Checks whether a saved Playwright login session exists.
-2. If there is no saved session, opens a visible Chromium browser, enters the
-   credentials configured in `credentials.py`, and lets you complete Google's
-   2-step verification.
+2. If there is no saved session, opens a visible Chromium browser and lets you
+   sign in manually, including entering your email, password, and any
+   verification prompts.
 3. Saves the browser session to `playwright/.auth/storage_state.json`.
-4. If a saved session exists, starts Chromium in headless mode and reuses it.
+4. If a saved session exists, starts a visible Chromium browser and reuses it.
 5. Reads unread messages shown in the Gmail inbox and prints the count and
    message details after closing the browser.
 
@@ -25,15 +25,15 @@ visibly.
 - `gmail_checker.py` — the Playwright script. It controls the browser,
   collects unread inbox message details, saves the login state, and prints the
   results.
-- `credentials.py` — a local configuration file containing `GMAIL_USERNAME`
-  and `GMAIL_PASSWORD`. Create it yourself as described below. Do not share or
-  commit it.
-- `credentials.example.py` — a safe template with placeholder values. Copy it
-  to `credentials.py` and replace the placeholders on your own machine.
+- `credentials.py` — not required; the script does not read or store your
+  password or email address.
+- `credentials.example.py` — an optional template; it is not used by the
+  checker.
+- `tests/test_gmail_checker.py` — mocked tests for login flow, unread-message
+  extraction, and saved-session behavior.
 - `playwright/.auth/storage_state.json` — created automatically after a
   successful sign-in. It contains sensitive browser session data. Do not share
-  or commit it. The tracked `.gitkeep` in this directory only preserves the
-  empty directory in Git; it contains no login data.
+  or commit it.
 - `venv/` — an optional local Python virtual environment. It is not required
   in the repository; each user can create their own.
 - `README.md` — this guide.
@@ -44,9 +44,8 @@ visibly.
 - A Google account with Gmail access
 - Internet access
 
-Google may challenge or block automated sign-in. This script uses the regular
-Google sign-in page; successful login is not guaranteed for every account or
-environment.
+Enter your email, password, and any verification manually in the visible
+browser.
 
 ## Setup
 
@@ -75,22 +74,7 @@ python -m pip install playwright
 python -m playwright install chromium
 ```
 
-### 4. Create your private `credentials.py`
-
-In PowerShell, copy the safe template to the local credentials file:
-
-```powershell
-Copy-Item credentials.example.py credentials.py
-```
-
-Open `credentials.py` and replace the placeholder values with your own Gmail
-username and password. Keep the values inside quotes. This local file is
-ignored by Git. Never publish it or paste credentials into chat, screenshots,
-or issue trackers. Storing a Google password in a plain-text file is risky;
-use this approach only on a trusted, private machine. Anyone who can read this
-file can see the password.
-
-### 5. Run the script
+### 4. Run the script
 
 ```powershell
 python gmail_checker.py
@@ -101,22 +85,21 @@ python gmail_checker.py
 When `playwright/.auth/storage_state.json` does not exist:
 
 1. The script opens a visible Chromium window.
-2. It enters the username and password from `credentials.py`.
-3. Complete any Google sign-in prompts and 2-step verification in the browser.
-4. The script continues after Google redirects to Gmail, checks the inbox, and
+2. Enter your email, password, and any verification prompts manually in the
+   browser.
+3. The script continues after Google redirects to Gmail, checks the inbox, and
    saves the session state.
-5. The browser closes, then the unread count and messages are printed in the
+4. The browser closes, then the unread count and messages are printed in the
    terminal.
 
-The script waits up to five minutes for Gmail to load after the password step.
-If Google presents a different page or the wait times out, complete the sign-in
-manually in the visible browser if possible. Google may change its sign-in
-screens, so the automated field labels can also need updating.
+The script waits up to five minutes for Gmail to load after you start signing
+in. If you do not finish in time, run it again and complete sign-in in the
+visible browser.
 
-## Later runs (headless mode)
+## Later runs (visible browser)
 
-When the saved session file exists, the script launches Chromium headlessly and
-uses the saved session; no browser window is displayed. Run the same command:
+When the saved session file exists, the script launches a visible Chromium
+window and uses the saved session. Run the same command:
 
 ```powershell
 python gmail_checker.py
@@ -128,6 +111,15 @@ that the saved login needs attention. To sign in again, delete only
 visible sign-in flow and save a replacement session after successful login.
 Never upload or send the storage-state file: it may allow access to the
 account without entering the password.
+
+## Run tests
+
+The tests mock Playwright and do not open a browser or access a Gmail account.
+From the project root, run:
+
+```powershell
+python -m pytest -q
+```
 
 ## Example output
 
@@ -165,20 +157,10 @@ No unread messages found in the inbox.
 
 ## Keep private files out of GitHub
 
-Before pushing the project, add a `.gitignore` file in the project root with:
-
-```gitignore
-venv/
-__pycache__/
-credentials.py
-playwright/.auth/storage_state.json
-.env
-```
-
-You may commit `credentials.example.py` and `playwright/.auth/.gitkeep` as
-references. The example contains placeholders only; `.gitkeep` is an empty
-marker and does not contain a session. Do not commit `credentials.py` or
-`playwright/.auth/storage_state.json`.
+The root `.gitignore` excludes the local virtual environment, `credentials.py`,
+and `playwright/.auth/storage_state.json`. Keep those private files untracked.
+The optional `credentials.example.py` contains placeholders only. Never commit
+the real credentials file or saved browser session.
 
 Review the staged files before every push. If a real password or session file
 was committed or shared, remove it from the repository and rotate/revoke the
